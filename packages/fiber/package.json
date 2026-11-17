@@ -1,7 +1,7 @@
 {
   "name": "@react-three/fiber",
   "version": "9.8.1",
-  "description": "A React renderer for Threejs",
+  "description": "A React renderer for Threejs, with performance defaults built in (better-r3f)",
   "keywords": [
     "react",
     "renderer",
@@ -16,13 +16,16 @@
     "Cody Bennett (https://github.com/codyjasonbennett)",
     "Kris Baumgarter (https://github.com/krispya)"
   ],
+  "contributors": [
+    "kivzdev (https://github.com/kivzdev)"
+  ],
   "bugs": {
-    "url": "https://github.com/pmndrs/react-three-fiber/issues"
+    "url": "https://github.com/kivzdev/better-r3f/issues"
   },
-  "homepage": "https://github.com/pmndrs/react-three-fiber#readme",
+  "homepage": "https://github.com/kivzdev/better-r3f#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pmndrs/react-three-fiber.git"
+    "url": "git+https://github.com/kivzdev/better-r3f.git"
   },
   "collective": {
     "type": "opencollective",
