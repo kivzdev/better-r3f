@@ -207,7 +207,7 @@
 }
 .kz-metric {
   display: grid;
-  grid-template-columns: 116px minmax(0, 1fr) auto;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--s3);
   height: var(--row);
