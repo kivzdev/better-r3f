@@ -60,7 +60,9 @@ export function markInternal(component: object): void {
  * -----------------------------------------------------------------------------------------------*/
 
 const HOT_WINDOW = 1000
-const HOT_COMMITS = 30
+// React under load commits less often than the canvas draws (1,600 components setting state each frame commit
+// about 27 times a second on an M4), so the bar sits well below 60
+const HOT_COMMITS = 20
 
 interface Heat {
   start: number
@@ -94,7 +96,7 @@ function findOwner(fiber: unknown): string | undefined {
 }
 
 /**
- * Counts commits that change an object's props. Thirty of them within a second means a value that
+ * Counts commits that change an object's props. Twenty of them within a second means a value that
  * changes every frame is going through React state, which re-renders the component each time.
  */
 export function trackPropUpdate(instance: Instance, changed: Record<string, unknown>, fiber: unknown): void {

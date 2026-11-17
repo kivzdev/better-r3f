@@ -202,12 +202,12 @@ describe('hot props hint', () => {
     await commitMoves(45)
     const hints = warnings().filter((message) => message.includes('got new'))
     expect(hints).toHaveLength(1)
-    expect(hints[0]).toContain('<mesh> in <Mover> got new position from React 30 times')
+    expect(hints[0]).toContain('<mesh> in <Mover> got new position from React 20 times')
     expect(hints[0]).toContain('ref.current.position.set(x, y, z)')
   })
 
   it('stays quiet below the threshold', async () => {
-    await commitMoves(29)
+    await commitMoves(19)
     expect(warnings().filter((message) => message.includes('got new'))).toHaveLength(0)
   })
 
@@ -576,6 +576,17 @@ describe('adaptiveDpr', () => {
     return changes
   }
 
+  // runs fast frames until the ratio steps up (or `seconds` pass): returns how long that took
+  const raised = (controller: AdaptiveDprController, seconds: number) => {
+    const before = controller.current
+    let t = 0
+    while (t < seconds && controller.current === before) {
+      controller.sample(1 / 60)
+      t += 1 / 60
+    }
+    return controller.current === before ? Infinity : t
+  }
+
   it('steps down while frames are slow, never below min', () => {
     const controller = new AdaptiveDprController({ min: 1, max: 2 })
     run(controller, 60, 1.5)
@@ -605,21 +616,45 @@ describe('adaptiveDpr', () => {
     expect(controller.current).toBe(2)
   })
 
-  it('gives up on a ratio that keeps failing', () => {
+  it('leaves a ratio that just failed alone, longer each time', () => {
     const controller = new AdaptiveDprController({ min: 1, max: 2 })
     run(controller, 60, 1.5)
     run(controller, 30, 1.6)
     expect(controller.current).toBe(1.75)
 
-    // Fast at 1.75, too slow at 2, three times over
-    for (let i = 0; i < 3; i++) {
-      run(controller, 60, 2.6)
-      expect(controller.current).toBe(2)
-      run(controller, 30, 2)
-      expect(controller.current).toBe(1.75)
-    }
-    run(controller, 60, 10)
+    // fast at 1.75, so it tries 2, which is too slow
+    run(controller, 60, 2.6)
+    expect(controller.current).toBe(2)
+    run(controller, 30, 2)
     expect(controller.current).toBe(1.75)
+
+    // it doesn't try 2 again for 30 seconds...
+    run(controller, 60, 28)
+    expect(controller.current).toBe(1.75)
+    // ...then once more, and failing again doubles the wait
+    expect(raised(controller, 4)).toBeLessThan(4)
+    run(controller, 30, 2)
+    expect(controller.current).toBe(1.75)
+    run(controller, 60, 58)
+    expect(controller.current).toBe(1.75)
+    expect(raised(controller, 6)).toBeLessThan(6)
+  })
+
+  it('forgets a failed ratio once it holds', () => {
+    const controller = new AdaptiveDprController({ min: 1, max: 2 })
+    run(controller, 60, 1.5)
+    run(controller, 30, 1.6)
+    run(controller, 60, 2.6)
+    run(controller, 30, 2)
+    expect(controller.current).toBe(1.75)
+
+    // after the wait, 2 holds this time; a slow spell much later drops it and the climb back is immediate
+    run(controller, 60, 40)
+    expect(controller.current).toBe(2)
+    run(controller, 30, 1.6)
+    expect(controller.current).toBe(1.75)
+    run(controller, 60, 3)
+    expect(controller.current).toBe(2)
   })
 
   it('holds its ratio across configuration and follows the range', async () => {

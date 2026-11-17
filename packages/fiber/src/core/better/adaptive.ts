@@ -23,12 +23,11 @@ const DECLINE_SAMPLES = 4
 const INCLINE_SAMPLES = 8
 /** Seconds ignored after a change, while the canvas resizes and shaders warm up */
 const SETTLE = 0.5
-/** A drop this soon after a raise means the higher ratio can't hold */
+/** A drop this soon after a raise means the higher ratio can't hold... */
 const FLIP_WINDOW = 3
-/** After this many of those it stops raising... */
-const MAX_FLIPS = 3
-/** ...until frames have been fine this long */
-const FLIP_RESET = 30
+/** ...so it isn't tried again for this many seconds, twice as long each time it fails again */
+const RETRY_AFTER = 30
+const RETRY_MAX = 240
 /** A longer gap is a pause (offscreen, hidden tab, breakpoint), not a slow frame */
 const MAX_DELTA = 0.25
 
@@ -37,8 +36,9 @@ const round = (value: number) => Math.round(value * 100) / 100
 
 /**
  * Picks the pixel ratio from measured frame times: a second below 90% of the target frame rate steps
- * it down, two seconds at the target step it back up. A ratio that keeps failing right after a step
- * up is given up on, so it doesn't flicker between two resolutions.
+ * it down, two seconds at the target step it back up. A ratio that fails right after a step up isn't
+ * tried again for a while (30 seconds, then twice as long each time), so it doesn't flicker between
+ * two resolutions.
  */
 export class AdaptiveDprController {
   min = 1
@@ -54,8 +54,10 @@ export class AdaptiveDprController {
   // The first second is loading and shader compilation, not the scene's real frame rate
   private settleUntil = 1
   private raisedAt = -Infinity
-  private declinedAt = -Infinity
-  private flips = 0
+  // the lowest ratio that failed right after a step up, and when it may be tried again
+  private ceiling = Infinity
+  private retryAt = 0
+  private retryWait = RETRY_AFTER
 
   constructor(options: ControllerOptions) {
     this.current = Math.max(options.min, options.max)
@@ -90,19 +92,25 @@ export class AdaptiveDprController {
     this.windowTime = this.windowFrames = 0
 
     if (this.current > this.min && this.lastSamples(DECLINE_SAMPLES, 0, this.targetFps * 0.9)) {
-      if (this.time - this.raisedAt < FLIP_WINDOW) this.flips++
-      this.declinedAt = this.time
+      if (this.time - this.raisedAt < FLIP_WINDOW) {
+        // the step up didn't hold: leave that ratio alone for a while
+        this.ceiling = this.current
+        this.retryAt = this.time + this.retryWait
+        this.retryWait = Math.min(this.retryWait * 2, RETRY_MAX)
+      }
       return this.change(this.current - this.step)
     }
 
-    if (this.flips >= MAX_FLIPS && this.time - this.declinedAt > FLIP_RESET) this.flips = 0
-    if (
-      this.current < this.max &&
-      this.flips < MAX_FLIPS &&
-      this.lastSamples(INCLINE_SAMPLES, this.targetFps * 0.97, Infinity)
-    ) {
+    // a ratio that held this time: whatever stopped it before has gone
+    if (this.current >= this.ceiling && this.time - this.raisedAt >= FLIP_WINDOW) {
+      this.ceiling = Infinity
+      this.retryWait = RETRY_AFTER
+    }
+    const next = round(this.current + this.step)
+    const waiting = next >= this.ceiling - 1e-6 && this.time < this.retryAt
+    if (this.current < this.max && !waiting && this.lastSamples(INCLINE_SAMPLES, this.targetFps * 0.97, Infinity)) {
       this.raisedAt = this.time
-      return this.change(this.current + this.step)
+      return this.change(next)
     }
 
     return undefined
