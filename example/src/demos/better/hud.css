@@ -1,0 +1,350 @@
+/* The better-r3f demos' panel, in kivz.dev's design (kivz-design skill, kivz.dev v3): no card, no shadow, no gradient
+   fill; one type size (Inter 14/20, weight 500); white for what matters and grey for the rest; one 4 px spacing scale;
+   every control the same 30 px box; one highlight (#565656 at 14 %) that slides between controls on a spring; 1 px
+   hairlines between rows. The scenes stand on the same ground (#141414), so the panel needs no surface of its own; a
+   soft fade from the left keeps it readable over a busy scene. */
+
+.BetterStage {
+  --bg: #141414;
+  --fg: #eaeae9;
+  --fg-2: #565656;
+  --text-2: #9b9a97;
+  --hair: #1d1d1d;
+  --fill: rgb(86 86 86 / 0.14);
+  --well: #191918;
+  --sans: 'Inter Variable', 'Inter', -apple-system, 'SF Pro Text', system-ui, sans-serif;
+  --mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+  --s10: 40px;
+  --s20: 80px;
+  --ctl: 30px;
+  --ctl-x: 12px;
+  --ctl-r: 6px;
+  --row: 36px;
+  --edge: clamp(20px, 5.6vw, 82px);
+  --top: 40px;
+  --start: 120px;
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-settle: cubic-bezier(0.05, 0.85, 0.3, 1);
+  --ease-spring: linear(
+    0,
+    0.137,
+    0.269,
+    0.394,
+    0.512,
+    0.617,
+    0.711,
+    0.792,
+    0.86,
+    0.916,
+    0.959,
+    0.992,
+    1.015,
+    1.029,
+    1.035,
+    1.034,
+    1.033,
+    1.031,
+    1.028,
+    1.026,
+    1.023,
+    1.02,
+    1.017,
+    1.014,
+    1.011,
+    1.008,
+    1.006,
+    1.004,
+    1.002,
+    1.001,
+    1,
+    1,
+    1
+  );
+
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 500 14px/20px var(--sans);
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.BetterStage *,
+.BetterStage *::before,
+.BetterStage *::after {
+  box-sizing: border-box;
+}
+.BetterStage :is(h1, h2, p, ul, li, pre, button) {
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  list-style: none;
+}
+.BetterStage button {
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.BetterStage a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ── the panels: two plates on the left, as in the first version — the demos and their numbers at the top, what's
+   going on at the foot. They're the scenes' own ground (#141414), so they read as part of the stage and the words
+   stay readable over anything ──────────────────────────────────────────────────────────────────────────────── */
+.kz-rail,
+.kz-caption {
+  position: absolute;
+  left: var(--s4);
+  z-index: 10;
+  border-radius: 12px;
+  background: var(--bg); /* the scenes' own ground: the panel reads as part of the stage */
+}
+.kz-rail {
+  top: var(--s4);
+  display: flex;
+  flex-direction: column;
+  width: 296px;
+  max-height: calc(100% - 2 * var(--s4));
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: var(--s2);
+}
+.kz-head {
+  display: flex;
+  align-items: center;
+  height: var(--ctl);
+  padding-inline: var(--ctl-x);
+}
+.kz-nav {
+  margin-top: var(--s2);
+}
+.kz-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  margin-top: var(--s2);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--hair);
+}
+.kz-block .kz-code {
+  padding-inline: var(--ctl-x);
+}
+.kz-label {
+  color: var(--fg-2);
+}
+
+/* every control is this box; the highlight under it is one element per group that glides between them */
+.kz-btn {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: var(--ctl);
+  padding-inline: var(--ctl-x);
+  border-radius: var(--ctl-r);
+  color: var(--fg-2);
+  white-space: nowrap;
+  transition: color 0.25s;
+}
+.kz-btn[data-on] {
+  color: var(--fg);
+}
+.kz-btn:focus-visible {
+  outline: 1px solid var(--fg-2);
+  outline-offset: 2px;
+}
+.kz-pills {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.kz-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--ctl-r);
+  background: var(--fill);
+  pointer-events: none;
+  opacity: 0;
+}
+/* the version switch: equal boxes in a row, like kivz.dev's language switch */
+.kz-switch {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(42px, 1fr);
+  width: max-content;
+}
+.kz-nav .kz-btn {
+  justify-content: flex-start;
+}
+.kz-switch .kz-btn {
+  justify-content: center;
+  padding-inline: var(--s3);
+  font-size: 13px;
+}
+.kz-code {
+  font: 400 12.5px/20px var(--mono);
+  color: var(--text-2);
+}
+
+/* the numbers: a ruled list, the label grey, the value white, a thin line of the last few seconds between them */
+.kz-metrics {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--s3);
+  padding-inline: var(--ctl-x);
+}
+.kz-metric {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  height: var(--row);
+  border-top: 1px solid var(--hair);
+}
+.kz-metric span:first-child {
+  color: var(--fg-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kz-metric canvas {
+  display: block;
+  width: 100%;
+  height: 14px;
+}
+.kz-value {
+  min-width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums; /* live numbers: digits keep their place as they change */
+}
+.kz-value small {
+  font-size: inherit;
+  color: var(--fg-2);
+}
+
+/* what better-r3f printed to the console, on kivz.dev's code plate */
+.kz-hint {
+  margin-top: var(--s2);
+  padding: var(--s3) var(--ctl-x);
+  border-radius: var(--ctl-r);
+  background: var(--well);
+  font: 400 12.5px/20px var(--mono);
+  color: var(--text-2);
+  white-space: pre-wrap;
+}
+.kz-hint b {
+  font-weight: 400;
+  color: var(--fg);
+}
+
+/* the title and what's going on, on its own plate at the foot: white, then grey */
+.kz-caption {
+  bottom: var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  max-width: 460px;
+  padding: var(--s4) var(--s5);
+}
+.kz-caption p {
+  color: var(--fg-2);
+}
+.kz-caption code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--well);
+  font: 400 12.5px var(--mono);
+  color: var(--text-2);
+}
+
+/* the entrance: the panel's parts rise into place on 'settle', 50 ms apart; nothing appears all at once */
+.kz-in {
+  animation: kz-rise 0.8s var(--ease-settle) both;
+  animation-delay: calc(0.15s + var(--i, 0) * 0.05s);
+}
+@keyframes kz-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kz-in {
+    animation: kz-fade 0.4s ease both;
+  }
+  @keyframes kz-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* recording a GIF: only the switch and the numbers, on a smaller plate in the corner */
+.kz-rail.recording {
+  top: var(--s2);
+  left: var(--s2);
+  width: 244px;
+  padding: var(--s1);
+}
+.kz-rail.recording .kz-block {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  gap: 0;
+}
+.kz-rail.recording .kz-switch .kz-btn {
+  padding-inline: var(--s2);
+}
+.kz-rail.recording .kz-metrics {
+  margin-top: var(--s1);
+  padding-inline: var(--s2);
+}
+.kz-rail.recording .kz-metric {
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: var(--s2);
+  height: 30px;
+}
+.kz-rail.recording .kz-value {
+  min-width: 44px;
+}
+.kz-rail.recording .kz-hint {
+  font-size: 11px;
+  line-height: 16px;
+  padding: var(--s2);
+}
+
+/* phones: the plates take the width, the list of demos becomes a row you can swipe */
+@media (max-width: 759px) {
+  .kz-rail {
+    left: var(--s3);
+    right: var(--s3);
+    top: var(--s3);
+    width: auto;
+  }
+  .kz-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .kz-caption {
+    left: var(--s3);
+    right: var(--s3);
+    bottom: var(--s3);
+    max-width: none;
+  }
+  .kz-caption p {
+    display: none;
+  }
+}

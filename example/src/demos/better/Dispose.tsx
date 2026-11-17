@@ -1,7 +1,7 @@
 import * as React from 'react'
 import * as THREE from 'three'
 import { Canvas, useDisposable, useFrame } from '@react-three/fiber'
-import { GlStats, Hud, Stage, gpuGeometries, gpuTextures, number, useMode } from './shared'
+import { GROUND, GlStats, Hud, KIVZ, Stage, gpuGeometries, gpuTextures, number, useMode } from './shared'
 
 const SWAP_EVERY = number('every', 120)
 
@@ -11,21 +11,21 @@ function makeCard(index: number) {
   canvas.width = 256
   canvas.height = 320
   const context = canvas.getContext('2d')!
-  const hue = (index * 47) % 360
-  const gradient = context.createLinearGradient(0, 0, 256, 320)
-  gradient.addColorStop(0, `hsl(${hue}, 80%, 62%)`)
-  gradient.addColorStop(1, `hsl(${(hue + 60) % 360}, 80%, 42%)`)
-  context.fillStyle = gradient
-  context.fillRect(0, 0, 256, 320)
-  context.fillStyle = 'rgba(255, 255, 255, 0.92)'
-  context.font = '700 96px -apple-system, system-ui, sans-serif'
+  const colors = [KIVZ.yellow, KIVZ.pink, KIVZ.blue, KIVZ.green, KIVZ.orange]
+  context.fillStyle = colors[index % colors.length]
+  context.beginPath()
+  context.roundRect(0, 0, 256, 320, 28)
+  context.fill()
+  context.fillStyle = GROUND
+  context.font = '600 92px "Inter Variable", Inter, system-ui, sans-serif'
   context.textAlign = 'center'
   context.textBaseline = 'middle'
-  context.fillText(`#${index}`, 128, 160)
+  context.fillText(`${index}`, 128, 168)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
-  const geometry = new THREE.BoxGeometry(2.4, 3, 0.08)
+  texture.anisotropy = 4
+  const geometry = new THREE.PlaneGeometry(2.4, 3)
   return { texture, geometry }
 }
 
@@ -44,7 +44,7 @@ function MemoCard({ index }: { index: number }) {
   const { texture, geometry } = React.useMemo(() => makeCard(index), [index])
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial map={texture} />
+      <meshBasicMaterial map={texture} transparent side={THREE.DoubleSide} toneMapped={false} />
     </mesh>
   )
 }
@@ -54,14 +54,14 @@ function DisposableCard({ index }: { index: number }) {
   const { texture, geometry } = useDisposable(() => makeCard(index), [index])
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial map={texture} />
+      <meshBasicMaterial map={texture} transparent side={THREE.DoubleSide} toneMapped={false} />
     </mesh>
   )
 }
 
 const metrics = [
-  { label: 'Textures on GPU', read: gpuTextures, graph: {}, peak: true },
-  { label: 'Geometries on GPU', read: gpuGeometries, graph: {}, peak: true },
+  { label: 'Textures', read: gpuTextures, graph: {}, peak: true },
+  { label: 'Geometries', read: gpuGeometries, graph: {}, peak: true },
 ]
 
 export default function Dispose() {
@@ -76,7 +76,7 @@ export default function Dispose() {
   return (
     <Stage>
       <Canvas key={mode} camera={{ position: [0, 0, 6], fov: 45 }}>
-        <color attach="background" args={['#0d0f14']} />
+        <color attach="background" args={[GROUND]} />
         <Spin>
           <Card key={index} index={index} />
         </Spin>
@@ -89,8 +89,8 @@ export default function Dispose() {
         title="Disposing what you create"
         description={
           <>
-            A card with a hand-made texture and geometry, swapped every {SWAP_EVERY} ms. R3F disposes what JSX declares,
-            not objects you make yourself. <code>useDisposable</code> does.
+            A card with a texture and geometry made by hand, swapped every {SWAP_EVERY} ms. r3f disposes what JSX
+            declares, not what you make yourself; <code>useDisposable</code> does. The numbers are what’s on the GPU.
           </>
         }
         metrics={metrics}

@@ -29,14 +29,18 @@ const ChangeTexture = { Component: lazy(() => import('./ChangeTexture')) }
 const WebGPU = { Component: lazy(() => import('./WebGPU')) }
 const FlushSync = { Component: lazy(() => import('./FlushSync')) }
 
-const BetterInstancing = { Component: lazy(() => import('./better/Instancing')) }
-const BetterRerenders = { Component: lazy(() => import('./better/Rerenders')) }
-const BetterPool = { Component: lazy(() => import('./better/Pool')) }
+// one scene for the four particle demos (better/particles/World.tsx)
+const Particles = lazy(() => import('./better/particles/World'))
+const BetterFluid = { Component: Particles }
+const BetterInstancing = { Component: Particles }
+const BetterRerenders = { Component: Particles }
+const BetterPool = { Component: Particles }
 const BetterOffscreen = { Component: lazy(() => import('./better/Offscreen')) }
 const BetterAdaptiveDpr = { Component: lazy(() => import('./better/AdaptiveDpr')) }
 const BetterDispose = { Component: lazy(() => import('./better/Dispose')) }
 
 export {
+  BetterFluid,
   BetterInstancing,
   BetterRerenders,
   BetterPool,
