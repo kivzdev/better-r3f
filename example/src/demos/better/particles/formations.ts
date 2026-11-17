@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { FramePool } from '@react-three/fiber'
 import { KIVZ, along } from '../shared'
-import { REST, SPIN } from '../fluid/particles'
+import { SPAWN } from '../fluid/particles'
 import { rand3, sequence } from './hash'
 
 /**
@@ -285,34 +285,26 @@ const YELLOW = new THREE.Color(KIVZ.yellow)
 const ORANGE_RED = new THREE.Color('#ff4a1c')
 const _h = [0, 0, 0]
 
-/** where fluid particle `j` sits in the cloud at time 0, round `center` (screen heights) */
-export function fluidHome(j: number, side: number, center: THREE.Vector2, out: THREE.Vector2) {
-  rand3(j % side, Math.floor(j / side), 3, _h)
-  const r = Math.sqrt(-2 * Math.log(Math.max(_h[0], 1e-6))) * REST
+/** where representative `i` waits for the stream at a hand-over: in a disc round `center` (screen heights) */
+export function fluidHome(i: number, side: number, center: THREE.Vector2, out: THREE.Vector2) {
+  rand3(i % side, Math.floor(i / side), 3, _h)
+  const r = Math.sqrt(_h[0]) * SPAWN * 1.6
   const a = _h[1] * Math.PI * 2
   return out.set(center.x + Math.cos(a) * r, center.y + Math.sin(a) * r)
 }
 
-/** fluid particle `j`'s colour at `time`, still (the shader's formula) */
-export function fluidColor(j: number, side: number, time: number, out: THREE.Color) {
-  const x = j % side
-  const y = Math.floor(j / side)
-  rand3(x, y, 3, _h)
-  const r = Math.sqrt(-2 * Math.log(Math.max(_h[0], 1e-6)))
-  const seed = rand3(x, y, 5, _h)[0]
-  const wave = 0.5 + 0.5 * Math.sin(time * 1.4 - r * 2.8 + seed * 0.9)
+/** representative `i`'s colour at a hand-over, which every particle gathered on it wears too (the shader's formula) */
+export function fluidColor(i: number, side: number, out: THREE.Color) {
+  const k = 0.2 + 0.55 * rand3(i % side, Math.floor(i / side), 13, _h)[0]
   // the shader's colours are written as they are, so mix them as the screen sees them, then hand them over in linear
   out.setRGB(
-    THREE.MathUtils.lerp(0.992, 1.0, wave * 0.7),
-    THREE.MathUtils.lerp(0.851, 0.29, wave * 0.7),
-    THREE.MathUtils.lerp(0.0, 0.11, wave * 0.7),
+    THREE.MathUtils.lerp(0.992, 1.0, k),
+    THREE.MathUtils.lerp(0.851, 0.29, k),
+    THREE.MathUtils.lerp(0.0, 0.11, k),
     THREE.SRGBColorSpace,
   )
   return out
 }
-
-/** the fluid particle drawn last on representative i's spot, so on top: the colour you see there */
-export const topmost = (i: number, n: number, count: number) => i + n * Math.floor((count - 1 - i) / n)
 
 /** screen heights → the fluid camera's world */
 export function toWorld(x: number, y: number, aspect: number, out: THREE.Vector3) {
@@ -336,7 +328,7 @@ export function fluid(n: number): Formation {
         out.scale[i * 3 + 2] = size
         out.rot.fill(0, i * 4, i * 4 + 3)
         out.rot[i * 4 + 3] = 1
-        setColor(out, i, fluidColor(topmost(i, n, ctx.fluidCount), ctx.fluidSide, 0, _c))
+        setColor(out, i, fluidColor(i, ctx.fluidSide, _c))
       }
     },
     // while the fluid runs the graphics card draws it; the representatives wait
@@ -344,4 +336,4 @@ export function fluid(n: number): Formation {
   }
 }
 
-export { YELLOW, ORANGE_RED, SPIN }
+export { YELLOW, ORANGE_RED }

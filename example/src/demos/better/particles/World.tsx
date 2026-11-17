@@ -45,7 +45,6 @@ import {
   pose,
   rerenders,
   toWorld,
-  topmost,
   type Context,
   type Formation,
   type FormationId,
@@ -129,15 +128,17 @@ function trackPointer() {
 class FluidField {
   readonly sim = new FluidSim({
     resolution: coarse ? 112 : 160,
-    curl: 22,
-    force: 3200,
-    radius: 0.05,
-    dissipation: 1.2,
+    curl: 30,
+    force: 4800,
+    radius: 0.07,
+    dissipation: 0.8,
     iterations: 20,
   })
   readonly flow: ParticleFlow
   time = 0
   readonly at = new THREE.Vector2(-1, -1) // the pointer, in screen heights
+  // the point the stream follows: the pointer, eased (a fifth of the way each frame at 60 fps, as in The Spirit)
+  private readonly follow = new THREE.Vector2(-1, -1)
   private readonly last = new THREE.Vector2()
   private readonly uv = new THREE.Vector2()
   private readonly push = new THREE.Vector2()
@@ -159,15 +160,20 @@ class FluidField {
     // the push in uv per second (x across the width)
     this.push.set(this.speed.x / aspect, this.speed.y)
     this.sim.step(gl, this.uv, merge > 0 ? this.push.set(0, 0) : this.push)
+    if (this.follow.x < 0) this.follow.copy(center)
+    this.follow.lerp(center, 1 - Math.exp(-dt * 13))
+    // just handed over: every particle still wears its representative's colour, and takes its own over 0.8 s
+    const settled = Math.min(this.time / 0.8, 1)
     this.flow.step({
       dt,
       time: this.time,
       aspect,
-      pointer: this.at,
+      follow: this.follow,
       fluid: this.sim.texture,
       fluidScale: 1 / this.sim.height,
       size: SQUARE * gl.getPixelRatio(),
       merge,
+      handoff: Math.max(merge, 1 - settled * settled * (3 - 2 * settled)),
     })
     this.time += dt
     void cssHeight
@@ -392,7 +398,7 @@ function World({ target, modes }: { target: FormationId; modes: Record<Formation
           s.cur.scale.fill(square, i * 3, i * 3 + 3)
           s.cur.rot.fill(0, i * 4, i * 4 + 3)
           s.cur.rot[i * 4 + 3] = 1
-          fluidColor(topmost(i, N, FLUID_SIDE ** 2), FLUID_SIDE, field.time, color).toArray(s.cur.color, i * 3)
+          fluidColor(i, FLUID_SIDE, color).toArray(s.cur.color, i * 3)
         }
         s.fluidOn = false
         beginMorph(want)
@@ -498,8 +504,9 @@ const PANELS: Record<
     title: `Fluid: ${integer(FLUID_SIDE ** 2)} particles`,
     description: (
       <>
-        Move the pointer: it pushes a fluid simulated on the graphics card, and a million squares drift with it — swept
-        into eddies, then gathered round the pointer again. Every square is the same; only its colour moves.
+        A million squares stream from the pointer on a drifting curl current, as in Edan Kwan’s The Spirit: born yellow,
+        orange-red as they age, and swept into eddies by the fluid the pointer stirs. Every square is the same; only its
+        colour moves.
       </>
     ),
     labels: { classic: 'dpr={[1, 2]}', better: 'adaptiveDpr' },

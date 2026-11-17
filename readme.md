@@ -339,7 +339,8 @@ stirring the fluid. The numbers are from those runs and will differ on your mach
 ## Credits and license
 
 better-r3f is a fork of [react-three-fiber](https://github.com/pmndrs/react-three-fiber) by
-[Poimandres](https://github.com/pmndrs) and its contributors. For everything that isn't listed above, the
+[Poimandres](https://github.com/pmndrs) and its contributors. The fluid demo's stream follows Edan Kwan's
+[The Spirit](https://github.com/edankwan/The-Spirit) (MIT). For everything that isn't listed above, the
 [r3f documentation](https://r3f.docs.pmnd.rs) applies. MIT licensed, like the original; see [LICENSE](LICENSE).
 
 The fork is maintained by [@kivzdev](https://github.com/kivzdev).
