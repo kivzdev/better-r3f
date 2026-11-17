@@ -29,7 +29,20 @@ const ChangeTexture = { Component: lazy(() => import('./ChangeTexture')) }
 const WebGPU = { Component: lazy(() => import('./WebGPU')) }
 const FlushSync = { Component: lazy(() => import('./FlushSync')) }
 
+const BetterInstancing = { Component: lazy(() => import('./better/Instancing')) }
+const BetterRerenders = { Component: lazy(() => import('./better/Rerenders')) }
+const BetterPool = { Component: lazy(() => import('./better/Pool')) }
+const BetterOffscreen = { Component: lazy(() => import('./better/Offscreen')) }
+const BetterAdaptiveDpr = { Component: lazy(() => import('./better/AdaptiveDpr')) }
+const BetterDispose = { Component: lazy(() => import('./better/Dispose')) }
+
 export {
+  BetterInstancing,
+  BetterRerenders,
+  BetterPool,
+  BetterOffscreen,
+  BetterAdaptiveDpr,
+  BetterDispose,
   Activity,
   AutoDispose,
   ClickAndHover,
