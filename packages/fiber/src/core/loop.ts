@@ -68,6 +68,16 @@ function update(timestamp: number, state: RootState, frame?: XRFrame) {
     state.clock.elapsedTime = timestamp
   }
 
+  // Recycle last frame's scratch objects. A hand-built state passed to advance() may have no pool
+  state.pool?.reset()
+
+  // Let measured frame times pick the pixel ratio
+  const adaptiveDpr = state.internal.adaptiveDpr
+  if (adaptiveDpr && state.frameloop === 'always') {
+    const dpr = adaptiveDpr.sample(delta)
+    if (dpr !== undefined) state.setDpr(dpr)
+  }
+
   // Call subscribers (useFrame)
   subscribers = state.internal.subscribers
   for (let i = 0; i < subscribers.length; i++) {
@@ -102,9 +112,10 @@ export function loop(timestamp: number): void {
   for (const root of _roots.values()) {
     state = root.store.getState()
 
-    // If the frameloop is invalidated, do not run another frame
+    // If the frameloop is invalidated, do not run another frame. Roots out of view sit out
     if (
       state.internal.active &&
+      !state.internal.offscreen &&
       (state.frameloop === 'always' || state.internal.frames > 0) &&
       !state.gl.xr?.isPresenting
     ) {
@@ -148,6 +159,9 @@ export function invalidate(state?: RootState, frames = 1): void {
       state.internal.frames = 1
     }
   }
+
+  // A root out of view renders the frame once it's back
+  if (state.internal.offscreen) return
 
   // If the render-loop isn't active, start it
   if (!running) {

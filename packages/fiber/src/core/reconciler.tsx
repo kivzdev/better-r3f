@@ -32,6 +32,7 @@ import {
 import type { RootStore } from './store'
 import { swapInteractivity, removeInteractivity, type EventHandlers } from './events'
 import { hasConstructor, resolveConstructor, toPascalCase, type ConstructorRepresentation } from './extend'
+import { scheduleSceneAudit, trackPropUpdate } from './better/warnings'
 
 export { extend } from './extend'
 export type { ConstructorRepresentation, Catalogue } from './extend'
@@ -651,7 +652,11 @@ export const reconciler = /* @__PURE__ */ createReconciler<
       if (attach !== undefined) instance.props.attach = attach
       else delete instance.props.attach
 
-      if (Object.keys(changedProps).length) applyProps(instance.object, changedProps)
+      if (Object.keys(changedProps).length) {
+        applyProps(instance.object, changedProps)
+        // Hints when a value that changes every frame goes through React
+        trackPropUpdate(instance, changedProps, fiber)
+      }
     }
   },
   finalizeInitialChildren: () => false,
@@ -661,7 +666,11 @@ export const reconciler = /* @__PURE__ */ createReconciler<
   preparePortalMount: (container) => prepare(container.getState().scene, container, '', {}),
   // Reconstructed instances are swapped once all mutations are committed,
   // before layout effects run so refs point to the new objects
-  resetAfterCommit: flushReconstructedInstances,
+  resetAfterCommit(container: RootStore) {
+    flushReconstructedInstances()
+    // Hints when many identical meshes could be one instanced mesh
+    scheduleSceneAudit(container)
+  },
   shouldSetTextContent: () => false,
   clearContainer: () => false,
   hideInstance,

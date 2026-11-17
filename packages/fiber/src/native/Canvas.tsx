@@ -29,7 +29,10 @@ import { RootState, Size } from '../core/store'
 // TODO: React 19 needs support from react-native
 const _View = View as any
 
-export interface CanvasProps extends Omit<RenderProps<HTMLCanvasElement>, 'size' | 'dpr'>, Omit<ViewProps, 'children'> {
+// expo-gl renders at the native pixel ratio, and native views have no viewport to scroll out of
+export interface CanvasProps
+  extends Omit<RenderProps<HTMLCanvasElement>, 'size' | 'dpr' | 'adaptiveDpr' | 'pauseWhenOffscreen'>,
+    Omit<ViewProps, 'children'> {
   children?: React.ReactNode
   style?: ViewStyle
   ref?: React.Ref<View>

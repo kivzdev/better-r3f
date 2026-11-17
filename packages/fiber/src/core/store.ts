@@ -4,6 +4,8 @@ import { type StoreApi } from 'zustand'
 import { createWithEqualityFn, type UseBoundStoreWithEqualityFn } from 'zustand/traditional'
 import type { DomEvent, EventManager, PointerCaptureTarget, ThreeEvent } from './events'
 import { calculateDpr, type Camera, isOrthographicCamera, updateCamera } from './utils'
+import { createFramePool, type FramePool } from './better/pool'
+import type { AdaptiveDprController } from './better/adaptive'
 
 export interface Intersection extends THREE.Intersection {
   eventObject: THREE.Object3D
@@ -67,6 +69,10 @@ export interface InternalState {
   active: boolean
   priority: number
   frames: number
+  /** The canvas is out of view or its tab is hidden, so the loop skips this root (see `pauseWhenOffscreen`) */
+  offscreen: boolean
+  /** Picks the pixel ratio from frame times while `adaptiveDpr` is on */
+  adaptiveDpr: AdaptiveDprController | null
   subscribe: (callback: React.RefObject<RenderCallback>, priority: number, store: RootStore) => () => void
 }
 
@@ -90,6 +96,11 @@ export interface RootState {
   raycaster: THREE.Raycaster
   /** Default clock */
   clock: THREE.Clock
+  /**
+   * Scratch vectors, quaternions, matrices and colors for the frame loop. Everything it hands out is
+   * recycled before the next frame, so per-frame math allocates nothing: `pool.vector3(x, y, z)`
+   */
+  pool: FramePool
   /** Event layer interface, contains the event handler and the node they're connected to */
   events: EventManager<any>
   /** XR interface */
@@ -198,6 +209,7 @@ export const createStore = (
 
       controls: null,
       clock: new THREE.Clock(),
+      pool: createFramePool(),
       pointer,
       mouse: pointer,
 
@@ -277,6 +289,8 @@ export const createStore = (
         active: false,
         frames: 0,
         priority: 0,
+        offscreen: false,
+        adaptiveDpr: null,
         subscribe: (ref: React.RefObject<RenderCallback>, priority: number, store: RootStore) => {
           const internal = get().internal
           // If this subscription was given a priority, it takes rendering into its own hands

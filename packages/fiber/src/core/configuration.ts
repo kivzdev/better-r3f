@@ -13,6 +13,8 @@ import {
 } from './store'
 import { applyProps, calculateDpr, type Camera, is, prepare, type Properties, watchDpr } from './utils'
 import { isRenderer } from './renderer'
+import { type AdaptiveDprOptions, resolveDpr } from './better/adaptive'
+import { checkDpr } from './better/warnings'
 
 // Shim for OffscreenCanvas since it was removed from DOM types
 // https://github.com/DefinitelyTyped/DefinitelyTyped/pull/54988
@@ -74,6 +76,16 @@ export interface RenderProps<TCanvas extends HTMLCanvasElement | OffscreenCanvas
   performance?: Partial<Omit<Performance, 'regress'>>
   /** Target pixel ratio. Can clamp between a range: `[min, max]` */
   dpr?: Dpr
+  /**
+   * Lowers the pixel ratio, a step at a time down to the low end of `dpr`, while frames run slower
+   * than the target frame rate, and raises it back once they keep up. Needs `frameloop="always"`.
+   */
+  adaptiveDpr?: boolean | AdaptiveDprOptions
+  /**
+   * Stops rendering while the canvas is scrolled out of view or its tab is hidden, and renders a
+   * fresh frame when it is back. Default: true
+   */
+  pauseWhenOffscreen?: boolean
   /** Props that go into the default raycaster */
   raycaster?: Partial<THREE.Raycaster>
   /** A `THREE.Scene` instance or props that go into the default scene */
@@ -222,8 +234,11 @@ export function applyRootConfiguration(
   // Store events internally
   if (props.events && !state.events.handlers) state.set({ events: props.events(store) })
   if (changed('size')) state.setSize(size.width, size.height, size.top, size.left)
-  // The ratio follows window.devicePixelRatio, which changes with browser zoom or another display
-  if (state.viewport.dpr !== calculateDpr(dpr)) state.setDpr(dpr)
+  // The ratio follows window.devicePixelRatio, which changes with browser zoom or another display.
+  // With adaptiveDpr, the controller picks it within that range
+  checkDpr(calculateDpr(dpr))
+  const targetDpr = resolveDpr(state, dpr, props.adaptiveDpr)
+  if (state.viewport.dpr !== targetDpr) state.setDpr(props.adaptiveDpr ? targetDpr : dpr)
   if (changed('frameloop')) state.setFrameloop(frameloop)
   if (changed('onPointerMissed')) state.set({ onPointerMissed })
   // Performance options merge, so removing them keeps the current settings
@@ -335,7 +350,8 @@ export function followDpr(root: { store: RootStore; configuration: AppliedConfig
     const last = root.configuration.previous
     if (!last) return
     const dpr = last.dpr ?? [1, 2]
-    if (state.viewport.dpr !== calculateDpr(dpr)) state.setDpr(dpr)
+    const target = resolveDpr(state, dpr, last.adaptiveDpr)
+    if (state.viewport.dpr !== target) state.setDpr(last.adaptiveDpr ? target : dpr)
   }
   const unwatch = watchDpr(follow)
   return () => {

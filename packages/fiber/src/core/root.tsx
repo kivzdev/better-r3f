@@ -10,6 +10,7 @@ import { reconciler } from './reconciler'
 import { context, createStore, type Renderer, type RootState, type RootStore } from './store'
 import { dispose, noop } from './utils'
 import { useIsomorphicLayoutEffect } from './utils/react'
+import { pauseWhenOffscreen } from './better/visibility'
 
 // Shim for OffscreenCanvas since it was removed from DOM types
 // https://github.com/DefinitelyTyped/DefinitelyTyped/pull/54988
@@ -26,6 +27,8 @@ export interface Root {
   ownsRenderer: boolean
   /** Stops following devicePixelRatio changes */
   unwatchDpr?: () => void
+  /** Stops pausing the root while its canvas is out of view */
+  unwatchVisibility?: () => void
 }
 
 export const _roots = new Map<HTMLCanvasElement | OffscreenCanvas, Root>()
@@ -143,6 +146,13 @@ export function createRoot<TCanvas extends HTMLCanvasElement | OffscreenCanvas>(
         applyRootConfiguration(root, canvas, props)
         // Only a range, including the default one, follows the display: a fixed dpr never touches matchMedia
         if (!root.unwatchDpr && (props.dpr === undefined || Array.isArray(props.dpr))) root.unwatchDpr = followDpr(root)
+        // Nothing renders while the canvas is out of view, unless pauseWhenOffscreen={false}
+        if (props.pauseWhenOffscreen !== false) {
+          if (!root.unwatchVisibility) root.unwatchVisibility = pauseWhenOffscreen(store, canvas)
+        } else if (root.unwatchVisibility) {
+          root.unwatchVisibility()
+          root.unwatchVisibility = undefined
+        }
         resolve(this)
       }
       const run = () => {
@@ -256,6 +266,7 @@ export function unmountComponentAtNode<TCanvas extends HTMLCanvasElement | Offsc
 
     // Release what uses the renderer before the renderer itself
     attempt(() => root.unwatchDpr?.())
+    attempt(() => root.unwatchVisibility?.())
     attempt(() => state.events.disconnect?.())
     if (state.gl?.xr) attempt(() => state.xr.disconnect())
     if (state.scene) attempt(() => dispose(state.scene))
