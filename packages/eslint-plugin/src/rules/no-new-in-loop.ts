@@ -6,7 +6,7 @@ const rule: Rule.RuleModule = {
   meta: {
     messages: {
       noNew:
-        'Instantiating new objects in the frame loop can cause performance problems. Instead, create once in a useMemo or a single, shared reference outside of the component.',
+        'Instantiating new objects in the frame loop can cause performance problems. Instead, take a recycled one from the frame pool (useFrame(({ pool }) => pool.vector3())), or create once in a useMemo or a single, shared reference outside of the component.',
     },
     docs: {
       url: gitHubUrl('no-new-in-loop'),

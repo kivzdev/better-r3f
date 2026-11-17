@@ -20,6 +20,20 @@ function MoveTowards({ x, y, z }) {
 
 #### ✅ Correct
 
+This takes a vector from the frame pool. Pooled objects are recycled before every frame, so nothing is allocated after the first one.
+
+```js
+function MoveTowards({ x, y, z }) {
+  const ref = useRef()
+
+  useFrame(({ pool }) => {
+    ref.current.position.lerp(pool.vector3(x, y, z), 0.1)
+  })
+
+  return <mesh ref={ref} />
+}
+```
+
 This creates a vector outside of the frame loop to be reused each frame.
 
 ```js
