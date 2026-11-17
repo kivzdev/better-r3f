@@ -7,10 +7,10 @@
 </p>
 
 <p align="center">
-  <img src=".github/assets/better-r3f/instancing.gif" width="804" alt="Left: 10,000 separate meshes at about 20 fps and 4,800 draw calls. Right: the same cubes with Instances at 60 fps and 1 draw call." />
+  <img src=".github/assets/better-r3f/tour.webp" width="900" alt="The four particle demos one after another: a million squares carried by a fluid, 10,000 rippling cubes, 1,600 gems on a globe and three swarms. The same particles move from each formation into the next, changing shape and colour on the way." />
 </p>
 
-<p align="center"><sub>10,000 cubes. Left: one <code>&lt;mesh&gt;</code> each, about 20 fps and 4,800 draw calls. Right: <code>&lt;Instances&gt;</code>, 60 fps and 1 draw call.</sub></p>
+<p align="center"><sub>The particle demos, one after another: a million squares in a fluid, 10,000 cubes, 1,600 gems, three swarms. The same particles travel from each formation into the next. <b><a href="https://kivzdev.github.io/better-r3f/">Open the live demos</a></b></sub></p>
 
 ---
 
@@ -46,7 +46,7 @@ ecosystem keep working. On top of that:
 better-r3f installs under the usual package name, so libraries that depend on `@react-three/fiber` use it too:
 
 ```bash
-npm install three @react-three/fiber@https://github.com/kivzdev/better-r3f/releases/download/v9.8.1-better.1/react-three-fiber-9.8.1.tgz
+npm install three @react-three/fiber@https://github.com/kivzdev/better-r3f/releases/download/v9.8.1-better.2/react-three-fiber-9.8.1.tgz
 ```
 
 It needs what r3f 9 needs: React 19 and three r156 or newer. Nothing to change in your code; the new features are opt-in
@@ -61,6 +61,9 @@ cd packages/fiber && npm pack   # react-three-fiber-9.8.1.tgz, install it like a
 ```
 
 ## 1. Instancing: `<Instances>`
+
+<p align="center"><img src=".github/assets/better-r3f/instancing.gif" width="842" alt="Left: 10,000 separate meshes at 15 fps, 65 ms a frame and about 5,200 draw calls, with the better-r3f hint. Right: the same cubes with Instances at 60 fps, 8 ms and 1 draw call." /></p>
+<p align="center"><sub>10,000 cubes. Left: one <code>&lt;mesh&gt;</code> each, 15 fps, 65 ms a frame and about 5,200 draw calls. Right: <code>&lt;Instances&gt;</code>, 60 fps, 8 ms and 1 draw call.</sub></p>
 
 Every `<mesh>` is a draw call. Ten thousand of them keep the main thread busy just telling the GPU what to draw.
 `<Instances>` draws all of its items with one call, and each item is still a normal object you can position, color,
@@ -122,15 +125,15 @@ In development, a scene with 100 or more meshes sharing a geometry and material 
 
 ## 2. Re-renders: a hint that names the component
 
-<p align="center"><img src=".github/assets/better-r3f/rerenders.gif" width="804" alt="Left: 1,600 gems spinning with useState, about 40 fps and 63,000 React renders per second, with the better-r3f hint. Right: the same with useRef, 60 fps and no renders." /></p>
-<p align="center"><sub>1,600 spinning gems. Left: <code>useState</code> in <code>useFrame</code>, about 40 fps and 63,000 React renders a second. Right: a ref, 60 fps and none.</sub></p>
+<p align="center"><img src=".github/assets/better-r3f/rerenders.gif" width="842" alt="Left: 1,600 gems spinning with useState, about 31 fps and 50,000 React renders a second, with the better-r3f hint. Right: the same with useRef, 60 fps and no renders." /></p>
+<p align="center"><sub>1,600 spinning gems. Left: <code>useState</code> in <code>useFrame</code>, about 31 fps and 50,000 React renders a second. Right: a ref, 60 fps and none.</sub></p>
 
 Setting state in `useFrame` re-renders the component and everything below it on every frame. It works, so it is easy
 to miss. better-r3f counts how often each object gets new props from React; when one gets them on most frames, it says
 so once, with the component's name and the fix:
 
 ```
-[better-r3f] <mesh> in <StateGem> got new rotation from React 30 times within a second. Each update re-renders
+[better-r3f] <mesh> in <StateGem> got new rotation from React 20 times within a second. Each update re-renders
 <StateGem> and everything below it.
 For values that change every frame, write to the object in useFrame instead:
 
@@ -163,8 +166,8 @@ react-spring) never trigger it.
 
 ## 3. Frame pool: `state.pool`
 
-<p align="center"><img src=".github/assets/better-r3f/pool.gif" width="804" alt="Left: 12,000 particles steering with new Vector3, 48,000 new vectors per frame and about 33 MB of garbage per second. Right: the same with pool.vector3, no new vectors and almost no garbage." /></p>
-<p align="center"><sub>12,000 steering particles, 4 temporary vectors each per frame. Left: <code>new THREE.Vector3()</code>, 48,000 new vectors a frame, 30–50 MB of garbage a second. Right: <code>pool.vector3()</code>, none.</sub></p>
+<p align="center"><img src=".github/assets/better-r3f/pool.gif" width="842" alt="Left: 10,000 particles steering with new Vector3, 40,000 new vectors a frame and about 66 MB of garbage a second. Right: the same with pool.vector3, no new vectors and 0.2 MB a second." /></p>
+<p align="center"><sub>10,000 steering particles, 4 temporary vectors each per frame. Left: <code>new THREE.Vector3()</code>, 40,000 new vectors a frame, about 66 MB of garbage a second. Right: <code>pool.vector3()</code>, none, and 0.2 MB a second from everything else.</sub></p>
 
 `state.pool` hands out vectors, quaternions, matrices, colors, boxes, spheres, rays and planes. Everything it hands out
 is recycled before the next frame, so per-frame math allocates nothing after the first frame.
@@ -185,7 +188,7 @@ the arguments: `pool.vector3(x, y, z)`, `pool.color('hotpink')`. Use pooled obje
 to keep a value, copy it into an object you own.
 
 Honest numbers: on the M4 used for the GIF both versions hold 60 fps, and the update itself costs about the same
-(1 ms for 48,000 vectors either way, measured in Node). What changes is the garbage: about 30–50 MB a second for the
+(1 ms for 48,000 vectors either way, measured in Node). What changes is the garbage: about 66 MB a second for the
 collector to clean up, versus almost none. Those collections are what show up as dropped frames on slower phones.
 
 `pool.stats` reports how many objects the current frame took and how many the pool holds. r3f's own
@@ -217,8 +220,8 @@ manual `advance()` calls are never paused.
 
 ## 5. Adaptive pixel ratio: `adaptiveDpr`
 
-<p align="center"><img src=".github/assets/better-r3f/adaptive-dpr.gif" width="804" alt="Left: a heavy shader at pixel ratio 2 runs at about 36 fps. Right: adaptiveDpr steps the pixel ratio down to 1.5 and reaches 56 to 60 fps." /></p>
-<p align="center"><sub>A fragment-heavy scene on a 2× screen. Left: <code>dpr={[1, 2]}</code> stays at 2 and runs at 35–39 fps. Right: <code>adaptiveDpr</code> steps down to 1.5 within four seconds and runs at 56–60 fps.</sub></p>
+<p align="center"><img src=".github/assets/better-r3f/adaptive-dpr.gif" width="842" alt="Left: a heavy shader at pixel ratio 2 runs at about 34 fps. Right: adaptiveDpr steps the pixel ratio down to 1.5 and reaches 60 fps." /></p>
+<p align="center"><sub>A scene that's heavy per pixel, on a 2× screen. Left: <code>dpr={[1, 2]}</code> stays at 2 and runs at about 34 fps. Right: <code>adaptiveDpr</code> steps down to 1.5 and runs at 60 fps.</sub></p>
 
 On a 2× screen, pixel ratio 2 means four times the pixels of 1. Capping it with `dpr={[1, 2]}` helps on 3× phones, but a
 scene that is too heavy at 2 stays too heavy. `adaptiveDpr` measures frame times and moves the ratio within your range:
@@ -230,8 +233,8 @@ scene that is too heavy at 2 stays too heavy. `adaptiveDpr` measures frame times
 
 - A second below 90% of the target frame rate steps the ratio down by `step`.
 - Two seconds at the target step it back up.
-- A ratio that fails again right after a step up is given up on (after three tries) so the canvas doesn't flicker
-  between two resolutions; it tries again after 30 calm seconds.
+- A ratio that can't hold the frame rate right after a step up isn't tried again for 30 seconds, then twice as long each
+  time it fails, so the canvas doesn't flicker between two resolutions. Once it holds, the wait resets.
 - Long gaps (a hidden tab, a breakpoint) don't count as slow frames, and the first second after loading is ignored.
 
 | Option      | Default                               | What it does             |
@@ -246,7 +249,7 @@ current value. In development, a pixel ratio above 2 gets a hint.
 
 ## 6. `useDisposable`
 
-<p align="center"><img src=".github/assets/better-r3f/dispose.gif" width="804" alt="Left: a card made in useMemo leaks a texture and a geometry on every swap, climbing past 50. Right: useDisposable keeps one of each." /></p>
+<p align="center"><img src=".github/assets/better-r3f/dispose.gif" width="842" alt="Left: a card made in useMemo leaks a texture and a geometry on every swap, climbing past 50. Right: useDisposable keeps one of each." /></p>
 <p align="center"><sub>A card with a hand-made texture and geometry, swapped every 120 ms. Left: <code>useMemo</code>, textures and geometries pile up on the GPU. Right: <code>useDisposable</code>, one of each.</sub></p>
 
 r3f disposes what you declare in JSX when it unmounts. It doesn't dispose objects you create yourself and pass in as
@@ -290,31 +293,36 @@ setWarnings({ instancing: false })
 
 | Hint         | When                                                                 |
 | ------------ | -------------------------------------------------------------------- |
-| `hotProps`   | An object gets new props from React 30 times within a second         |
+| `hotProps`   | An object gets new props from React 20 times within a second         |
 | `instancing` | 100 or more visible meshes share a geometry setup and material type  |
 | `dpr`        | The pixel ratio resolves above 2                                     |
 | `pool`       | The frame pool hands out 100,000 objects of one kind without a reset |
 
 ## Run the demos
 
-Every GIF above is a page of the example app, with a switch between the two versions:
+Every GIF above is a page of the example app, with a switch between the two versions. They're live at
+**[kivzdev.github.io/better-r3f](https://kivzdev.github.io/better-r3f/)**, or locally:
 
 ```bash
 yarn
 yarn examples
 ```
 
-Then open `/demo/BetterInstancing`, `BetterRerenders`, `BetterPool`, `BetterOffscreen`, `BetterAdaptiveDpr` or
-`BetterDispose` (add `?mode=classic` or `?mode=better`). The source is in
-[`example/src/demos/better`](example/src/demos/better).
+Then open `/demo/BetterFluid`, `BetterInstancing`, `BetterRerenders`, `BetterPool`, `BetterOffscreen`,
+`BetterAdaptiveDpr` or `BetterDispose` (add `?mode=classic` or `?mode=better`). The first four are one scene with one
+set of particles: moving from one to the next, every particle travels to its place in the next formation, and `?tour`
+walks through them on its own. The source is in [`example/src/demos/better`](example/src/demos/better).
 
 ## How the GIFs were recorded
 
-Headless Chrome 157 on an Apple M4 Mac, production build of the example app, 480×360 at a 2× pixel ratio. Each side
-of a comparison was recorded on its own, so the two never shared the CPU or GPU. The CPU-bound comparisons (instancing,
-re-renders, frame pool) ran with Chrome DevTools' 4× CPU slowdown, which stands in for a mid-range phone. Without it
-the M4 held 60 fps in all three, and the difference showed up as main-thread time instead: 11–15 ms versus about 4 ms
-per frame for the instancing scene. The numbers are from those runs and will differ on your machine.
+Headless Chrome 157 on an Apple M4 Mac, production build of the example app, 560×380 at a 2× pixel ratio, with
+`?record`, which keeps only the switch and the numbers on the panel. Each side of a comparison was recorded on its own,
+so the two never shared the CPU or GPU. The CPU-bound comparisons (instancing, re-renders, frame pool) ran with Chrome
+DevTools' 4× CPU slowdown, which stands in for a mid-range phone. Without it the M4 held 56–60 fps in all three, and
+the difference showed up as main-thread time instead: about 17 ms versus 5 ms per frame for the instancing scene. At
+that size the pixel ratio scene holds 60 fps even at 2×, so its GIF uses a heavier version of it
+(`?balls=64&steps=400&march=0.25`). The animation at the top is `/demo/BetterFluid?tour` at 900×506, with the pointer
+stirring the fluid. The numbers are from those runs and will differ on your machine.
 
 ## Differences from upstream
 
